@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VmosMosfik</string>
+    <string name="add_device">Add Device</string>
+    <string name="device_name">Device Name</string>
+    <string name="ssh_host">SSH Host</string>
+    <string name="ssh_port">SSH Port</string>
+    <string name="ssh_user">Username</string>
+    <string name="ssh_key">SSH Key / Password</string>
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="sync_mode">Sync Mode</string>
+    <string name="select_device">Select device for sync</string>
+</resources>
