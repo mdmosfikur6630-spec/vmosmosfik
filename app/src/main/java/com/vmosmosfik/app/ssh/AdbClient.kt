@@ -2,9 +2,8 @@ package com.vmosmosfik.app.ssh
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.Base64
 import android.util.Log
-import com.jcraft.jsch.JSch
-import com.jcraft.jsch.Session
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -110,27 +109,37 @@ class AdbClient {
         }
 
     /**
-     * Capture a screenshot using `screencap -p` via exec service.
-     * Exec service returns raw binary data without shell wrapping.
+     * Capture a screenshot using shell + base64 to avoid binary protocol issues.
+     * Uses `screencap -p` piped through base64 for reliable text transfer.
      */
     suspend fun captureScreen(): Result<Bitmap> =
         withContext(Dispatchers.IO) {
             try {
-                val service = "exec:screencap -p\u0000".toByteArray()
-                val (localId, remoteId) = openService(service)
-
-                // Read raw binary data
-                val imageData = readRawUntilClose(localId, remoteId)
-                if (imageData.isEmpty()) {
-                    return@withContext Result.failure(Exception("Empty screenshot"))
-                }
-
-                val bitmap = BitmapFactory.decodeByteArray(imageData, 0, imageData.size)
-                if (bitmap == null) {
-                    return@withContext Result.failure(Exception("Failed to decode screenshot"))
-                }
-
-                Result.success(bitmap)
+                // First save to file, then base64 encode for reliable text transfer
+                val result = shell("screencap -p /data/local/tmp/.vmss.tmp && cat /data/local/tmp/.vmss.tmp | base64 -w0 && rm -f /data/local/tmp/.vmss.tmp")
+                result.fold(
+                    onSuccess = { b64data ->
+                        Log.d(tag, "Screenshot base64 data length: ${b64data.length}")
+                        if (b64data.isEmpty()) {
+                            return@withContext Result.failure(Exception("Empty screenshot data"))
+                        }
+                        val imageData = Base64.decode(b64data, Base64.DEFAULT)
+                        Log.d(tag, "Decoded image size: ${imageData.size} bytes")
+                        if (imageData.size < 100) {
+                            Log.w(tag, "Screenshot too small: ${imageData.size} bytes. Raw: $b64data")
+                        }
+                        val bitmap = BitmapFactory.decodeByteArray(imageData, 0, imageData.size)
+                        if (bitmap == null) {
+                            return@withContext Result.failure(Exception("Failed to decode screenshot bitmap. Data size: ${imageData.size}"))
+                        }
+                        Log.d(tag, "Screenshot captured: ${bitmap.width}x${bitmap.height}")
+                        Result.success(bitmap)
+                    },
+                    onFailure = { e ->
+                        Log.e(tag, "Shell screencap failed: ${e.message}")
+                        Result.failure(e)
+                    }
+                )
             } catch (e: Exception) {
                 Log.e(tag, "Screenshot capture failed: ${e.message}", e)
                 Result.failure(e)
@@ -192,7 +201,7 @@ class AdbClient {
         return withContext(Dispatchers.IO) {
             try {
                 // Push the APK to device temp storage
-                val encoded = android.util.Base64.encodeToString(apkData, android.util.Base64.NO_WRAP)
+                val encoded = Base64.encodeToString(apkData, Base64.NO_WRAP)
                 val pushCmd = "base64 -d > /data/local/tmp/$apkName && pm install -r /data/local/tmp/$apkName && rm /data/local/tmp/$apkName"
 
                 // Write base64 data to stdin
