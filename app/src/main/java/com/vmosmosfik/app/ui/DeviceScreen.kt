@@ -163,7 +163,7 @@ fun DevicePanel(
                         val offsetX = (size.width - imageBitmap.width * scale) / 2f
                         val offsetY = (size.height - imageBitmap.height * scale) / 2f
 
-                        scale(scale, scale, android.graphics.Point(imageBitmap.width / 2, imageBitmap.height / 2)) {
+                        scale(scale, scale, androidx.compose.ui.geometry.Offset(imageBitmap.width / 2f, imageBitmap.height / 2f)) {
                             drawImage(
                                 image = imageBitmap,
                                 topLeft = androidx.compose.ui.geometry.Offset(

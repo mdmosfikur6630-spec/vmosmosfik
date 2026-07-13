@@ -60,8 +60,8 @@ class SshManager {
                 val outputStream = ByteArrayOutputStream()
                 val errorStream = ByteArrayOutputStream()
 
-                channel.outputStream = outputStream
-                channel.errStream = errorStream
+                channel.setOutputStream(outputStream)
+                channel.setErrStream(errorStream)
 
                 channel.connect(30000)  // 30 second timeout
 
