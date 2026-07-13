@@ -56,7 +56,7 @@ class AdbClient {
                 // Send CNXN (connection) packet
                 val version = 0x01000000  // ADB version 1.0
                 val maxdata = 4096
-                val systemType = "device::\0".toByteArray()
+                val systemType = "device::\u0000".toByteArray()
 
                 sendPacket(A_CNXN, version, maxdata, systemType)
 
@@ -97,7 +97,7 @@ class AdbClient {
     suspend fun shell(command: String): Result<String> =
         withContext(Dispatchers.IO) {
             try {
-                val service = "shell:$command\0".toByteArray()
+                val service = "shell:$command\u0000".toByteArray()
                 val (localId, remoteId) = openService(service)
 
                 // Read all output
@@ -116,7 +116,7 @@ class AdbClient {
     suspend fun captureScreen(): Result<Bitmap> =
         withContext(Dispatchers.IO) {
             try {
-                val service = "exec:screencap -p\0".toByteArray()
+                val service = "exec:screencap -p\u0000".toByteArray()
                 val (localId, remoteId) = openService(service)
 
                 // Read raw binary data
@@ -196,7 +196,7 @@ class AdbClient {
                 val pushCmd = "base64 -d > /data/local/tmp/$apkName && pm install -r /data/local/tmp/$apkName && rm /data/local/tmp/$apkName"
 
                 // Write base64 data to stdin
-                val service = "shell:$pushCmd\0".toByteArray()
+                val service = "shell:$pushCmd\u0000".toByteArray()
                 val (localId, remoteId) = openService(service)
 
                 // Send the base64 data
@@ -328,13 +328,13 @@ class AdbClient {
 
             when (packet.command) {
                 A_WRTE -> {
-                    val text = String(packet.payload, Charsets.UTF_8).trimEnd('\0', '\n', '\r')
+                    val text = String(packet.payload, Charsets.UTF_8).trimEnd('\u0000', '\n', '\r')
                     output.append(text)
                     // ACK
                     sendPacket(A_OKAY, localId, remoteId)
                 }
                 A_CLSE -> {
-                    output.append(String(packet.payload, Charsets.UTF_8).trimEnd('\0'))
+                    output.append(String(packet.payload, Charsets.UTF_8).trimEnd('\u0000'))
                     break
                 }
                 A_OKAY -> {
